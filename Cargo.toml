@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "algebraic-data-type",
     "general-types"
 ]
 
