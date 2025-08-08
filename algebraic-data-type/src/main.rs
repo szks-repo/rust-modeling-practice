@@ -1,4 +1,6 @@
+use std::marker::PhantomData;
 use std::ops::Add;
+use std::ptr::addr_eq;
 use anyhow::{anyhow};
 use chrono::{DateTime, Duration, Utc};
 
@@ -118,6 +120,55 @@ impl Order {
     }
 }
 
+struct Unverified;
+struct Verified;
+struct Blocked;
+
+struct Email<State> {
+    address: String,
+    _state: PhantomData<State>
+}
+
+impl Email<Unverified> {
+    fn new(address: String) -> Result<Self, String> {
+        if address.contains('@') {
+            Ok(Email{
+                address,
+                _state: PhantomData
+            })
+        } else {
+            Err("invalid format".to_string())
+        }
+    }
+
+    fn verify(self, code: &str) -> Result<Email<Verified>, String> {
+        if code == "123456" {
+            Ok(Email{
+                address: self.address,
+                _state: PhantomData,
+            })
+        } else {
+            Err("invalid varification code".to_string())
+        }
+    }
+}
+
+impl Email<Verified> {
+    fn block(&self) -> Email<Blocked> {
+        Email{
+            address: self.address.to_string(),
+            _state: PhantomData,
+        }
+    }
+}
+impl <State> Email<State> {
+    fn as_str(&self) -> &str {
+        return self.address.as_str()
+    }
+    fn into(&self) -> String {
+        return self.address.clone()
+    }
+}
 fn main() {
     {
         let today = Utc::now();
@@ -138,4 +189,8 @@ fn main() {
         let result = order.capture(today, None);
         println!("{}", result.err().unwrap());
     }
+
+    let email = Email::new("info@example.com".to_string()).unwrap();
+    let verify = email.verify("123456").unwrap();
+    println!("{:?}", verify.as_str());
 }
